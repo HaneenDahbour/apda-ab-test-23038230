@@ -1,0 +1,175 @@
+﻿# Landing Page A/B Test
+
+A reproducible analytics project for the Advanced Programming for Data Analysis course.
+
+## Student
+
+- **Name:** Haneen Mohammad Dahbour
+- **Student ID:** 23038230
+
+## Project question
+
+Does the new landing page produce a statistically supported difference in
+conversion rate compared with the old landing page?
+
+The project cleans the experiment records, calculates conversion summaries,
+tests the difference between the two conversion rates, and provides a final
+recommendation based on statistical and practical evidence.
+
+## Experiment definition
+
+- **Experimental unit:** One user
+- **Control group:** Users assigned to the old landing page
+- **Treatment group:** Users assigned to the new landing page
+- **Primary metric:** Proportion of users who converted
+- **Null hypothesis (H0):** The treatment and control population conversion rates are equal
+- **Alternative hypothesis (H1):** The treatment and control population conversion rates are different
+- **Significance level:** alpha = 0.05
+
+## Dataset
+
+The project uses the public **A/B testing** dataset from Kaggle:
+
+https://www.kaggle.com/datasets/zhangluyuan/ab-testing
+
+Only `ab_data.csv` is used. The raw file is downloaded separately and placed at:
+
+```text
+data/raw/ab_data.csv
+```
+
+The raw CSV is excluded from Git and must not be edited or committed. Additional
+source and download information is recorded in `data/raw/README.md`.
+
+## Repository structure
+
+```text
+apda-ab-test-23038230/
+|-- README.md
+|-- requirements.txt
+|-- .gitignore
+|-- data/
+|   |-- raw/
+|   |   `-- README.md
+|   `-- processed/
+|-- src/
+|   `-- pipeline.py
+|-- scripts/
+|   |-- run_pipeline.py
+|   `-- run_sql.py
+|-- sql/
+|   `-- analysis.sql
+|-- r/
+|   `-- ab_test.R
+|-- tests/
+|   `-- test_pipeline.py
+|-- outputs/
+|   |-- group_summary.csv
+|   |-- daily_conversion.csv
+|   `-- figures/
+`-- .github/
+    `-- workflows/
+        `-- tests.yml
+```
+
+## Software requirements
+
+### Python
+
+The project was developed using Python 3.14.5. Required Python packages are
+listed with exact versions in `requirements.txt`.
+
+Main packages:
+
+- pandas
+- pyarrow
+- duckdb
+- pytest
+
+### R
+
+R is required for the statistical test and visualizations. The R script uses:
+
+- readr
+- dplyr
+- ggplot2
+- base R `stats`
+
+## Environment setup
+
+Run these commands from the repository root.
+
+### Windows PowerShell
+
+```powershell
+python -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& ".\.venv\Scripts\Activate.ps1"
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## Reproduce the analysis
+
+The following commands are run from the repository root.
+
+### Run the Python cleaning pipeline
+
+```powershell
+python scripts/run_pipeline.py --input data/raw/ab_data.csv --output-dir data/processed
+```
+
+### Run the tests
+
+```powershell
+pytest -q
+```
+
+### Run the DuckDB analysis
+
+```powershell
+python scripts/run_sql.py
+```
+
+### Run the R analysis
+
+```powershell
+Rscript r/ab_test.R
+```
+
+## Generated files
+
+The Python pipeline creates:
+
+```text
+data/processed/clean_ab_data.csv
+data/processed/clean_ab_data.parquet
+```
+
+The DuckDB analysis creates:
+
+```text
+outputs/group_summary.csv
+outputs/daily_conversion.csv
+```
+
+The R analysis creates two figures inside:
+
+```text
+outputs/figures/
+```
+
+The processed datasets are excluded from Git because they can be recreated from
+the raw dataset using the documented pipeline command.
+
+## Testing and continuous integration
+
+Focused unit tests verify the pipeline without requiring the downloaded Kaggle
+dataset. GitHub Actions runs `pytest -q` automatically on pushes and pull
+requests.
+
+## Reproducibility
+
+All code uses paths relative to the repository root. No personal absolute paths
+are stored in the source code. The processed data, summaries, tests, and figures
+can be recreated using the commands documented above.
