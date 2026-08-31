@@ -209,16 +209,88 @@ rate       0.118808
 
 These are descriptive results only. Statistical inference is deferred to Phase 5.
 
-## Phase 2 remaining work
+## Block 2D - Command-Line Runner and Outputs
 
-- Block 2D: create command-line pipeline runner
-- Write clean CSV
-- Write clean Parquet
-- Validate generated files
-- Confirm reproducible rerun
-- Update documentation
-- Create Commit 2
-- Push Commit 2 to GitHub
+Created `scripts/run_pipeline.py`.
+
+The runner can recreate the cleaned data from the raw dataset with one command.
+
+It generates:
+
+- `data/processed/clean_ab_data.csv`
+- `data/processed/clean_ab_data.parquet`
+
+Both outputs were validated with:
+
+- 290,584 rows
+- 290,584 unique users
+- 0 duplicate users
+- 0 assignment mismatches
+- 145,274 control users
+- 145,310 treatment users
+
+## Block 2E - Reproducibility Check
+
+The generated CSV and Parquet files were hashed, deleted, regenerated from the
+same raw dataset, and hashed again.
+
+Results:
+
+- PASS: CSV reproduced identically.
+- PASS: Parquet reproduced identically.
+
+### SHA-256
+
+SHA-256 acts like a digital fingerprint for a file.
+
+It was used to:
+
+1. identify the exact raw dataset used for this project;
+2. verify that the same input, code, and environment reproduce the same output.
+
+The raw dataset SHA-256 is:
+
+d56e2accec25e99ac21cb3d76c5df516dd19cc7a77c14c9014f94e1ea1301beb
+
+Different input data should normally produce a different output hash.
+
+### Reusable Pipeline
+
+The cleaning pipeline can also process another dataset if it follows the same
+A/B-test data contract.
+
+It expects:
+
+- `user_id`
+- `timestamp`
+- `group`
+- `landing_page`
+- `converted`
+
+For compatible data it will apply the same rules:
+
+1. validate the schema and values;
+2. validate timestamps;
+3. remove control/new-page and treatment/old-page mismatches;
+4. validate duplicate users;
+5. keep the earliest equivalent duplicate;
+6. reject conflicting duplicate records;
+7. verify final invariants;
+8. write clean CSV and Parquet outputs.
+
+This means the project contains reusable cleaning logic rather than manual CSV editing.
+
+## Phase 2 Completion Summary
+
+294,478 raw observations  
+- 3,893 assignment mismatches  
+- 1 equivalent duplicate observation  
+= 290,584 clean observations  
+= 290,584 unique users
+
+Commit:
+
+`34a7a00 feat: add reproducible A/B data cleaning pipeline`
 
 ## Status
 
@@ -350,5 +422,6 @@ Phase 5  R Statistical Analysis           NOT STARTED
 Phase 6  Final Interpretation             NOT STARTED
 ```
 
-Next step: **Phase 2, Block 2D - Command-line pipeline runner and generated clean datasets.**
+Next step: **Phase 3, Block 3A - Pipeline unit tests.**
+
 
