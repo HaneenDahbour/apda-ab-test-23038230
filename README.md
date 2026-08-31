@@ -173,3 +173,9 @@ requests.
 All code uses paths relative to the repository root. No personal absolute paths
 are stored in the source code. The processed data, summaries, tests, and figures
 can be recreated using the commands documented above.
+
+## Project implementation guide
+
+A detailed phase-by-phase explanation of the project, technical decisions,
+validation results, and implementation progress is available in
+[PROJECT_PHASES.md](PROJECT_PHASES.md).
