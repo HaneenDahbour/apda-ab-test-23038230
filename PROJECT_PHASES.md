@@ -23,7 +23,7 @@ This file is a living project record. It should be updated at the end of each ph
 | 1 | Build a reproducible project foundation | Git, GitHub, Python environment, Markdown | COMPLETE |
 | 2 | Validate and clean the raw experiment data | Python, pandas, pyarrow | COMPLETE |
 | 3 | Test the pipeline automatically | pytest, GitHub Actions | COMPLETE |
-| 4 | Perform analytical queries | DuckDB, SQL, Python | NOT STARTED |
+| 4 | Perform analytical queries | DuckDB, SQL, Python | COMPLETE |
 | 5 | Perform statistical inference and visualization | R, stats, ggplot2 | NOT STARTED |
 | 6 | Interpret results and finalize the project | Markdown, Git, GitHub | NOT STARTED |
 
@@ -58,7 +58,7 @@ the analysis.
 
 ## Foundation commit
 
-```text
+````text
 7c9ddc7 chore: initialize reproducible A/B test workspace
 ```
 
@@ -88,13 +88,13 @@ File size: `15,901,933 bytes`
 
 SHA-256:
 
-```text
+````text
 d56e2accec25e99ac21cb3d76c5df516dd19cc7a77c14c9014f94e1ea1301beb
 ```
 
 Raw shape:
 
-```text
+````text
 Rows: 294,478
 Columns: 5
 ```
@@ -111,21 +111,21 @@ Findings:
 
 Valid experiment assignments:
 
-```text
+````text
 control   + old_page
 treatment + new_page
 ```
 
 Invalid experiment assignments:
 
-```text
+````text
 control   + new_page
 treatment + old_page
 ```
 
 Observed mismatches:
 
-```text
+````text
 control + new_page      1,928
 treatment + old_page    1,965
 Total mismatches        3,893
@@ -150,7 +150,7 @@ Cleaning order:
 
 After assignment cleaning:
 
-```text
+````text
 Raw rows:                   294,478
 Assignment mismatches:        3,893
 Rows after removal:         290,585
@@ -175,7 +175,7 @@ Main responsibilities:
 
 Real-data smoke-test result:
 
-```text
+````text
 raw_rows: 294,478
 assignment_mismatches_removed: 3,893
 duplicate_users_after_assignment_cleaning: 1
@@ -188,14 +188,14 @@ treatment_rows: 145,310
 
 Final invariants:
 
-```text
+````text
 Duplicate users remaining:       0
 Assignment mismatches remaining: 0
 ```
 
 Clean descriptive conversion rates:
 
-```text
+````text
 control
 count       145,274
 converted    17,489
@@ -318,29 +318,324 @@ Planned checks include valid input, schema failures, invalid values, malformed t
 
 ## Purpose
 
-Use SQL to create analytical summaries from the cleaned dataset.
+Transform the validated cleaned experiment data into reproducible analytical summaries using DuckDB and SQL.
 
-Planned tools: DuckDB, SQL, Python.
+The question changes from:
 
-Planned files:
+> Is the data clean and reliable?
 
-```text
-sql/analysis.sql
-scripts/run_sql.py
+to:
+
+> What does the cleaned experiment actually show?
+
+Phase 4 is descriptive analysis. Statistical inference is deliberately deferred to Phase 5.
+
+## Core Phase 4 Flow
+
+```mermaid
+flowchart TD
+    A["clean_ab_data.parquet<br/>290,584 clean users"]
+    B["scripts/run_sql.py<br/>Python orchestration"]
+    C["DuckDB<br/>In-memory SQL engine"]
+    D["clean_ab<br/>SQL view"]
+    E["group_summary.sql<br/>Overall group analysis"]
+    F["daily_conversion.sql<br/>Daily analysis"]
+    G["group_summary.csv"]
+    H["daily_conversion.csv"]
+    I["Validation + reconciliation"]
+    J["Phase 5<br/>Statistical inference"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+    E --> G
+    F --> H
+    G --> I
+    H --> I
+    I --> J
 ```
 
-Planned outputs:
+A simpler version of the same flow is:
 
 ```text
-outputs/group_summary.csv
-outputs/daily_conversion.csv
+Clean Parquet data
+       |
+       v
+Python runner
+       |
+       v
+DuckDB engine
+       |
+       v
+SQL queries
+       |
+       v
+Analytical summaries
+       |
+       v
+Validation
+       |
+       v
+Phase 5 statistical inference
 ```
+
+## What Each Technology Does
+
+### Parquet
+
+`clean_ab_data.parquet` stores the cleaned typed dataset efficiently.
+
+### Python
+
+`scripts/run_sql.py` orchestrates the workflow. It knows where the data, SQL files, and output files are located.
+
+### DuckDB
+
+DuckDB is the analytical execution engine. It performs operations such as COUNT, SUM, AVG, GROUP BY, ORDER BY, and date conversion.
+
+### SQL
+
+SQL expresses the analytical questions independently from Python orchestration.
+
+### CSV outputs
+
+The generated CSV files preserve small analytical results that can be reviewed and reused by later phases.
+
+## Why DuckDB
+
+A traditional database can require a permanent server, database configuration, credentials, networking, and table loading.
+
+DuckDB is embedded directly in the Python process:
+
+```python
+duckdb.connect(database=":memory:")
+```
+
+The temporary in-memory database exists only while the analytical script runs.
+
+The project therefore gets full SQL analytical capabilities without maintaining a separate database server.
+
+## Parquet to SQL View
+
+The runner reads:
+
+```text
+data/processed/clean_ab_data.parquet
+```
+
+and exposes the dataset to DuckDB SQL with the logical name:
+
+```text
+clean_ab
+```
+
+The SQL queries can therefore use:
+
+```sql
+FROM clean_ab
+```
+
+This separates responsibilities: Python manages physical file paths, while SQL describes the analysis.
+
+## Analytical Grain
+
+The grain of a dataset describes what one row represents.
+
+For this cleaned experiment:
+
+```text
+1 row = 1 unique experiment user
+```
+
+This is why `COUNT(*)` correctly represents the number of users.
+
+Phase 4 verifies the assumption again:
+
+```text
+Input rows:   290,584
+Unique users: 290,584
+```
+
+If these values differ, the analysis stops rather than producing potentially misleading statistics.
+
+## SQL Metric Logic
+
+The overall group query calculates:
+
+```sql
+SELECT
+    "group",
+    COUNT(*) AS users,
+    CAST(SUM(converted) AS BIGINT) AS conversions,
+    AVG(converted) AS conversion_rate
+FROM clean_ab
+GROUP BY "group"
+ORDER BY "group";
+```
+
+### COUNT(*)
+
+Counts rows. Because one row equals one user, this is the number of users.
+
+### SUM(converted)
+
+`converted` is binary:
+
+```text
+0 = did not convert
+1 = converted
+```
+
+Adding the column therefore counts conversions.
+
+### AVG(converted)
+
+The average of a 0/1 variable equals the proportion of observations equal to 1.
+
+Therefore:
+
+```text
+AVG(converted)
+=
+conversions / users
+=
+conversion rate
+```
+
+### GROUP BY
+
+`GROUP BY "group"` makes DuckDB calculate the metrics separately for control and treatment.
+
+## Daily Analysis
+
+The daily query uses:
+
+```sql
+CAST(timestamp AS DATE)
+```
+
+to convert a timestamp such as:
+
+```text
+2017-01-05 13:42:51
+```
+
+into:
+
+```text
+2017-01-05
+```
+
+The experiment contains 23 calendar dates and both experiment arms on every date:
+
+```text
+23 days x 2 groups = 46 daily summary rows
+```
+
+## Why the Runner Validates Again
+
+Phase 2 already validated the cleaned dataset, but every major analytical stage should protect the assumptions it depends on.
+
+Phase 4 therefore checks three types of correctness.
+
+### Data correctness
+
+```text
+Rows = unique users
+290,584 = 290,584
+```
+
+### Analytical correctness
+
+```text
+COUNT(*)       -> users
+SUM(converted) -> conversions
+AVG(converted) -> conversion rate
+```
+
+### Reconciliation correctness
+
+```text
+145,274 control users
++
+145,310 treatment users
+=
+290,584 total users
+```
+
+The daily summaries must also reconcile back to all 290,584 users.
+
+This detects accidental loss or double counting during aggregation.
+
+## Actual Descriptive Results
+
+| Group | Users | Conversions | Conversion rate |
+|---|---:|---:|---:|
+| Control | 145,274 | 17,489 | 12.0386% |
+| Treatment | 145,310 | 17,264 | 11.8808% |
+
+Total conversions: **34,753**.
+
+Observed treatment-minus-control difference:
+
+```text
+11.8808% - 12.0386%
+= approximately -0.1578 percentage points
+```
+
+Descriptively, the new-page treatment group converted slightly less often than the old-page control group in this sample.
+
+This is not yet evidence that the treatment is statistically worse.
+
+Phase 5 determines whether the observed difference is statistically supported or could reasonably result from random variation.
+
+## Reproducible Runner
+
+The complete SQL analysis is reproduced with:
+
+```powershell
+python scripts/run_sql.py
+```
+
+The runner automatically:
+
+1. finds the clean Parquet input;
+2. opens in-memory DuckDB;
+3. creates the `clean_ab` view;
+4. verifies input uniqueness;
+5. loads the SQL files;
+6. executes both analytical queries;
+7. validates the result schemas and totals;
+8. writes the two CSV outputs;
+9. closes the temporary database.
+
+## Generated Outputs
+
+- `outputs/group_summary.csv`
+- `outputs/daily_conversion.csv`
+
+These are small analytical result artifacts and are suitable to keep in Git for review, while the much larger processed datasets remain reproducible generated files excluded from Git.
+
+## How to Explain Phase 4 to the Teacher
+
+> Phase 4 takes the validated Parquet dataset and uses DuckDB as an embedded SQL analytical engine. Python orchestrates the process, while SQL defines the analytical calculations. Because the cleaned dataset has one row per user, COUNT represents users, SUM of the binary converted field counts conversions, and AVG calculates the conversion rate. The analysis produces overall and daily summaries, and all aggregated counts are reconciled back to the 290,584 cleaned users. The observed treatment rate is slightly lower than control, but Phase 4 is descriptive; statistical significance is evaluated separately in Phase 5.
+
+## Phase 4 Completion Gate
+
+Phase 4 reproducibility gate passed.
+
+- DuckDB analysis completed successfully.
+- Group and daily summaries reconciled to all 290,584 cleaned users.
+- The experiment covered 23 dates and produced 46 date-by-group rows.
+- The analytical CSV outputs were regenerated from the same clean Parquet input.
+- SHA-256 comparisons confirmed both outputs reproduced identically.
+- The existing pytest regression suite remained healthy with 13 tests passing.
 
 ## Status
 
-**NOT STARTED**
-
----
+**COMPLETE**
 
 # Phase 5 - R Statistical Analysis
 
@@ -352,7 +647,7 @@ Planned tools: R, readr, dplyr, ggplot2, base R stats.
 
 Hypotheses:
 
-```text
+````text
 H0: control and treatment population conversion rates are equal
 H1: control and treatment population conversion rates are different
 alpha = 0.05
@@ -400,11 +695,11 @@ At completion, another person should be able to:
 
 # Commit Roadmap
 
-```text
+````text
 Commit 1 - Workspace and reproducibility foundation        COMPLETE
 Commit 2 - Python validation and cleaning pipeline         COMPLETE
 Commit 3 - Pipeline tests and GitHub Actions               COMPLETE
-Commit 4 - DuckDB analytical queries                       NOT STARTED
+Commit 4 - DuckDB analytical queries                       COMPLETE
 Commit 5 - R analysis, figures, and statistical test       NOT STARTED
 Commit 6 - Final report documentation and results          NOT STARTED
 ```
@@ -413,16 +708,16 @@ Commit 6 - Final report documentation and results          NOT STARTED
 
 # Current Position
 
-```text
+````text
 Phase 1  Reproducible Foundation          COMPLETE
 Phase 2  Python Data Pipeline             COMPLETE
 Phase 3  Tests + Continuous Integration   COMPLETE
-Phase 4  DuckDB + SQL                     NOT STARTED
+Phase 4  DuckDB + SQL                     COMPLETE
 Phase 5  R Statistical Analysis           NOT STARTED
 Phase 6  Final Interpretation             NOT STARTED
 ```
 
-Next step: **Phase 4, Block 4A - DuckDB analytical design and SQL queries.**
+Next step: **Phase 5 - R statistical inference and visualization.**
 
 
 
@@ -479,7 +774,7 @@ GitHub Actions will:
 
 This checks that the project and its tests work outside the development laptop.
 
-GitHub Actions run 33494180229 completed successfully on a fresh Ubuntu runner. All CI steps passed.
+GitHub Actions run 33494180229 completed successfully on a fresh Ubuntu runner. After the workflow actions were updated, final verification run 33501111954 also completed successfully. All CI steps passed.
 
 ### How GitHub Actions Ran the Tests on Cloud Ubuntu
 
@@ -487,7 +782,7 @@ GitHub Actions is the Continuous Integration (CI) system used by this project.
 
 The workflow contains:
 
-``yaml
+```yaml
 runs-on: ubuntu-latest
 ``
 
@@ -514,7 +809,7 @@ The tests already passed on the local Windows development machine. They also pas
 
 Therefore Phase 3 provides stronger evidence of portability and reproducibility:
 
-``text
+```text
 Windows development machine -> tests pass
 Fresh Ubuntu CI machine     -> tests pass
 ``

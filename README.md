@@ -58,7 +58,8 @@ apda-ab-test-23038230/
 |   |-- run_pipeline.py
 |   `-- run_sql.py
 |-- sql/
-|   `-- analysis.sql
+|   |-- group_summary.sql
+|   `-- daily_conversion.sql
 |-- r/
 |   `-- ab_test.R
 |-- tests/
@@ -162,6 +163,27 @@ outputs/figures/
 The processed datasets are excluded from Git because they can be recreated from
 the raw dataset using the documented pipeline command.
 
+## DuckDB analytical layer
+
+Phase 4 uses `scripts/run_sql.py` with an in-memory DuckDB engine to query
+the cleaned Parquet dataset using the versioned SQL files in `sql/`.
+
+The analytical layer produces overall and daily summaries and validates that
+all aggregated user counts reconcile to the 290,584 cleaned experiment users.
+
+| Group | Users | Conversions | Conversion rate |
+|---|---:|---:|---:|
+| Control | 145,274 | 17,489 | 12.0386% |
+| Treatment | 145,310 | 17,264 | 11.8808% |
+
+The observed treatment-minus-control difference is approximately -0.1578
+percentage points. This is descriptive only; statistical inference is performed
+in Phase 5.
+
+Phase 4 reproducibility verification passed: rerunning the DuckDB analytical
+pipeline from the same cleaned Parquet input reproduced both analytical CSV
+outputs identically.
+
 ## Testing and continuous integration
 
 The cleaning pipeline is covered by 13 focused pytest cases using small
@@ -183,6 +205,7 @@ requests. The Phase 3 CI verification completed successfully on a fresh Ubuntu r
 The workflow uses `runs-on: ubuntu-latest`, so GitHub automatically creates a
 temporary Linux machine, checks out the repository, installs Python and the
 documented dependencies, and runs the same pytest suite used locally.
+
 ## Reproducibility
 
 All code uses paths relative to the repository root. No personal absolute paths
