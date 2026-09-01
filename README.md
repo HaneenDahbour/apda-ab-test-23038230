@@ -16,6 +16,71 @@ The project cleans the experiment records, calculates conversion summaries,
 tests the difference between the two conversion rates, and provides a final
 recommendation based on statistical and practical evidence.
 
+## Final result
+
+The experiment contained **290,584 validated unique users** after the deterministic cleaning pipeline.
+
+| Group | Users | Conversions | Conversion rate |
+|---|---:|---:|---:|
+| Control / old page | 145,274 | 17,489 | 12.0386% |
+| Treatment / new page | 145,310 | 17,264 | 11.8808% |
+
+The observed effect was defined consistently as:
+
+```text
+Treatment - Control
+= -0.1578 percentage points
+```
+
+The two-sided two-proportion test produced:
+
+| Statistical result | Value |
+|---|---:|
+| p-value | 0.189883 |
+| alpha | 0.05 |
+| 95% CI lower bound | -0.3938 percentage points |
+| 95% CI upper bound | +0.0781 percentage points |
+| Decision | Fail to reject H0 |
+
+Because the p-value is greater than 0.05 and the 95% confidence interval
+contains zero, the experiment does **not** provide sufficient statistical
+evidence that the population conversion rates of the old and new landing
+pages differ.
+
+The treatment group was slightly lower descriptively, but the evidence is
+not strong enough to conclude that the new page truly reduces conversion.
+
+### Recommendation
+
+The new landing page should **not be rolled out on the claim that it improves
+conversion**, because this experiment did not demonstrate a statistically
+supported conversion uplift.
+
+This conclusion applies to the measured conversion outcome only. Other
+considerations such as usability, accessibility, design, maintenance cost,
+or other business metrics would require separate evidence.
+
+### Overall conversion rates
+
+![Overall A/B test conversion rates](outputs/figures/conversion_rates.png)
+
+The overall figure shows the descriptive difference: approximately 12.04%
+for control versus 11.88% for treatment.
+
+### Daily conversion rates
+
+![Daily A/B test conversion rates](outputs/figures/daily_conversion.png)
+
+The daily figure shows natural day-to-day variation in both experiment arms.
+The groups cross on different dates, illustrating why the final conclusion
+requires statistical inference rather than comparison of two sample averages alone.
+
+### Important interpretation
+
+`Fail to reject H0` does **not** mean that the two pages were proven identical.
+It means that this experiment did not provide sufficient statistical evidence
+at the 5% significance level to establish a population conversion-rate difference.
+
 ## Experiment definition
 
 - **Experimental unit:** One user
@@ -68,7 +133,10 @@ apda-ab-test-23038230/
 |-- outputs/
 |   |-- group_summary.csv
 |   |-- daily_conversion.csv
+|   |-- statistical_test.csv
 |   `-- figures/
+|       |-- conversion_rates.png
+|       `-- daily_conversion.png
 `-- .github/
     `-- workflows/
         `-- tests.yml

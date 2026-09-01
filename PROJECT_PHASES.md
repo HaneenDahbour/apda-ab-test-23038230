@@ -25,7 +25,7 @@ This file is a living project record. It should be updated at the end of each ph
 | 3 | Test the pipeline automatically | pytest, GitHub Actions | COMPLETE |
 | 4 | Perform analytical queries | DuckDB, SQL, Python | COMPLETE |
 | 5 | Perform statistical inference and visualization | R, stats, ggplot2 | COMPLETE |
-| 6 | Interpret results and finalize the project | Markdown, Git, GitHub | NOT STARTED |
+| 6 | Interpret results and finalize the project | Markdown, Git, GitHub | COMPLETE |
 
 ---
 
@@ -990,6 +990,127 @@ After adding the R bin directory to the session PATH, `Rscript --version` succee
 
 > Phase 4 showed the observed conversion rates, but an observed difference can occur simply because of random sampling variation. Phase 5 therefore performs statistical inference. The null hypothesis assumes the two population conversion rates are equal, while the two-sided alternative says they differ. A two-proportion test calculates a p-value and confidence interval. The p-value is compared with alpha = 0.05 to decide whether there is sufficient evidence to reject the null hypothesis. The confidence interval shows the plausible size and direction of the effect. Statistical significance is kept separate from practical significance, which is considered in the final recommendation.
 
+## Phase 5 in Plain Language
+
+### The central question
+
+Phase 4 showed an observed difference between the two experiment groups:
+
+```text
+Control:   12.0386%
+Treatment: 11.8808%
+
+Treatment - Control = -0.1578 percentage points
+```
+
+However, sample conversion rates naturally fluctuate.
+
+Therefore Phase 5 does not ask only which sample rate is larger. It asks:
+
+> Is the observed -0.1578 percentage-point difference strong enough to provide evidence of a real population difference, or could normal random variation reasonably produce a difference this size?
+
+### End-to-end Phase 5 logic
+
+```mermaid
+flowchart TD
+    A["Phase 4 summaries"]
+    B["R reads and validates counts"]
+    C["Control = 12.0386%<br/>Treatment = 11.8808%"]
+    D["Observed Treatment - Control<br/>-0.1578 percentage points"]
+    E["Two-proportion test"]
+    F["p-value = 0.1899"]
+    G["95% CI<br/>-0.3938 to +0.0781 pp"]
+    H["Compare p-value with alpha = 0.05"]
+    I["0.1899 > 0.05"]
+    J["Fail to reject H0"]
+    K["No sufficient statistical evidence<br/>of a population rate difference"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    E --> G
+    F --> H
+    H --> I
+    I --> J
+    G --> J
+    J --> K
+```
+
+### How the R script is organized
+
+```text
+1. Load readr, dplyr, and ggplot2
+        |
+        v
+2. Read Phase 4 CSV summaries
+        |
+        v
+3. Validate group names, counts, and rates
+        |
+        v
+4. Calculate control and treatment rates
+        |
+        v
+5. Define effect = Treatment - Control
+        |
+        v
+6. Run two-proportion test
+        |
+        v
+7. Extract p-value and 95% confidence interval
+        |
+        v
+8. Compare p-value with alpha = 0.05
+        |
+        v
+9. Save statistical_test.csv
+        |
+        v
+10. Create statistical figures
+```
+
+### Interpretation of the overall-rate figure
+
+`conversion_rates.png` shows that the observed control conversion rate was about 12.04% and the treatment rate was about 11.88%.
+
+This figure is descriptive. It shows the observed difference but does not by itself establish statistical significance.
+
+### Interpretation of the daily figure
+
+`daily_conversion.png` shows day-to-day fluctuations in both experiment groups. On some dates treatment is higher and on other dates control is higher.
+
+This illustrates why an A/B-test conclusion should not be based only on a small difference between two overall sample averages. Statistical inference is required to distinguish a possible effect from natural sampling variation.
+
+### Final statistical interpretation
+
+```text
+Observed effect:
+Treatment - Control = -0.1578 percentage points
+
+p-value = 0.1899
+alpha   = 0.05
+
+0.1899 > 0.05
+
+Decision: Fail to reject H0
+```
+
+The 95% confidence interval is approximately:
+
+```text
+-0.3938 pp -------- 0 -------- +0.0781 pp
+```
+
+Because zero is inside this interval, no population difference remains compatible with the observed experiment.
+
+The correct conclusion is not that the pages were proven equal. The correct conclusion is that this experiment does not provide sufficient statistical evidence at the 5% significance level that their population conversion rates differ.
+
+### Teacher explanation
+
+> Phase 5 converts the descriptive A/B difference from Phase 4 into a statistical decision. The treatment rate was slightly lower in the sample, but sample rates naturally fluctuate. I therefore used a two-proportion test in R. The p-value was 0.1899, which is greater than alpha 0.05, and the 95% confidence interval included zero. Therefore I failed to reject the null hypothesis. This means the experiment did not provide sufficient evidence of a real population conversion-rate difference; it does not prove that the two pages are exactly equal.
+
 ## Phase 5 Completion Gate
 
 Phase 5 reproducibility gate passed.
@@ -1019,14 +1140,152 @@ Therefore Phase 5 is considered reproducible and complete.
 
 ## Purpose
 
-Combine all technical outputs into a clear final answer to the project question.
+Combine the validated data pipeline, descriptive analysis, and statistical inference into a clear final answer to the original A/B-test question.
 
-The final interpretation will distinguish between descriptive difference, statistical significance, and practical significance.
-The README and this document will be updated with final results and exact reproduction commands.
+Phase 6 does not introduce another statistical test.
+
+It asks:
+
+> Given all of the evidence produced by the project, what conclusion and recommendation are justified?
+
+## Core Phase 6 Flow
+
+```mermaid
+flowchart TD
+    A["Phase 2<br/>290,584 validated unique users"]
+    B["Phase 4<br/>Descriptive A/B difference"]
+    C["Treatment - Control<br/>-0.1578 percentage points"]
+    D["Phase 5<br/>Statistical inference"]
+    E["p = 0.1899<br/>95% CI contains zero"]
+    F["Fail to reject H0"]
+    G["Separate statistical and practical meaning"]
+    H["Final conclusion"]
+    I["Business recommendation"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+```
+
+## Three Levels of Interpretation
+
+### 1. Descriptive interpretation
+
+The observed experiment rates were:
+
+```text
+Control:   12.0386%
+Treatment: 11.8808%
+
+Treatment - Control = -0.1578 percentage points
+```
+
+Therefore the treatment/new page converted slightly less often in the observed sample.
+
+### 2. Statistical interpretation
+
+Phase 5 produced:
+
+```text
+p-value = 0.1899
+alpha   = 0.05
+
+95% CI for Treatment - Control:
+-0.3938 to +0.0781 percentage points
+```
+
+Because the p-value is greater than alpha and the confidence interval includes zero, the correct decision is:
+
+```text
+Fail to reject H0
+```
+
+The experiment does not provide sufficient statistical evidence that the population conversion rates differ.
+
+This does not prove that the pages are exactly equal.
+
+### 3. Practical and decision interpretation
+
+The experiment was designed to evaluate conversion rate.
+
+The evidence does not demonstrate that the new landing page improves conversion.
+
+Therefore a rollout should not be justified on the claim of conversion uplift based on this experiment alone.
+
+However, the experiment does not measure every possible business benefit of the new page. Other considerations such as accessibility, design quality, maintenance cost, user experience, or other business metrics would require separate evidence.
+
+## Final Answer to the Project Question
+
+Original question:
+
+> Does the new landing page produce a statistically supported difference in conversion rate compared with the old landing page?
+
+Answer:
+
+> No statistically supported difference was detected at the 5% significance level. The treatment group had a slightly lower observed conversion rate, but the two-sided p-value was approximately 0.1899 and the 95% confidence interval included zero. Therefore the experiment fails to reject the null hypothesis.
+
+## Recommendation
+
+> Do not claim or justify deployment of the new landing page on the basis of improved conversion from this experiment. The experiment did not demonstrate a statistically significant conversion uplift. Additional product or business considerations may still justify further testing or adoption for reasons outside the measured conversion outcome.
+
+## Important Limitations
+
+The final conclusion should be interpreted within the scope of the experiment.
+
+- The experiment covers approximately 23 calendar days.
+- The primary outcome is conversion only.
+- The analysis evaluates the overall treatment and control populations rather than detailed user segments.
+- Failure to reject H0 is not proof that the true effect is exactly zero.
+- The confidence interval describes the remaining uncertainty around the effect.
+- Business costs and benefits outside conversion are not represented in the dataset.
+
+## How to Explain Phase 6 to the Teacher
+
+> Phase 6 combines the previous phases rather than performing another test. Phase 4 showed a small descriptive difference, and Phase 5 showed that the difference was not statistically significant. Therefore I cannot claim that the new page changes the population conversion rate. My recommendation is not to justify rollout based on conversion improvement from this experiment alone. I also distinguish that conclusion from saying the pages are proven equal, because failing to reject H0 does not prove equality.
+
+## Final End-to-End Reproducibility Gate
+
+Final end-to-end reproducibility gate passed.
+
+The project was rerun in dependency order:
+
+```text
+Raw CSV
+  -> Python cleaning
+  -> pytest regression tests
+  -> DuckDB SQL analysis
+  -> R statistical inference
+  -> final result validation
+```
+
+Verified final evidence:
+
+- Raw rows: 294,478.
+- Clean unique users: 290,584.
+- Control users: 145,274.
+- Treatment users: 145,310.
+- Control conversion rate: 12.0386%.
+- Treatment conversion rate: 11.8808%.
+- Treatment - Control: -0.1578 percentage points.
+- Two-sided p-value: 0.189883.
+- 95% confidence interval: approximately [-0.3938, +0.0781] percentage points.
+- Statistical decision: Fail to reject H0.
+- 13 Python regression tests passed.
+- DuckDB analytical outputs regenerated successfully.
+- R statistical outputs and figures regenerated successfully.
+- Final automated result assertions passed.
+- All expected final artifacts exist.
+
+The project therefore reproduced successfully from raw input through final statistical interpretation.
 
 ## Status
 
-**NOT STARTED**
+**COMPLETE**
 
 ---
 
@@ -1055,7 +1314,7 @@ Commit 2 - Python validation and cleaning pipeline         COMPLETE
 Commit 3 - Pipeline tests and GitHub Actions               COMPLETE
 Commit 4 - DuckDB analytical queries                       COMPLETE
 Commit 5 - R analysis, figures, and statistical test       COMPLETE
-Commit 6 - Final report documentation and results          NOT STARTED
+Commit 6 - Final report documentation and results          COMPLETE
 ```
 
 ---
@@ -1068,7 +1327,7 @@ Phase 2  Python Data Pipeline             COMPLETE
 Phase 3  Tests + Continuous Integration   COMPLETE
 Phase 4  DuckDB + SQL                     COMPLETE
 Phase 5  R Statistical Analysis           COMPLETE
-Phase 6  Final Interpretation             NOT STARTED
+Phase 6  Final Interpretation             COMPLETE
 ```
 
 Next step: **Phase 6 - final interpretation, practical significance, and project conclusion.**
