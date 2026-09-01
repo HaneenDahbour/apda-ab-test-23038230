@@ -164,10 +164,22 @@ the raw dataset using the documented pipeline command.
 
 ## Testing and continuous integration
 
-Focused unit tests verify the pipeline without requiring the downloaded Kaggle
-dataset. GitHub Actions runs `pytest -q` automatically on pushes and pull
-requests.
+The cleaning pipeline is covered by 13 focused pytest cases using small
+synthetic DataFrames, so the tests do not require the downloaded Kaggle dataset.
 
+The tests cover schema validation, missing and invalid values, timestamp
+validation, experiment-assignment mismatches, deterministic duplicate handling,
+conflicting duplicate detection, and final one-user-per-row invariants.
+
+Run the tests locally with:
+
+```powershell
+python -m pytest -q
+```
+
+GitHub Actions is configured in `.github/workflows/tests.yml` to recreate the
+Python environment and run the same test suite automatically on pushes and pull
+requests.
 ## Reproducibility
 
 All code uses paths relative to the repository root. No personal absolute paths
@@ -179,3 +191,4 @@ can be recreated using the commands documented above.
 A detailed phase-by-phase explanation of the project, technical decisions,
 validation results, and implementation progress is available in
 [PROJECT_PHASES.md](PROJECT_PHASES.md).
+

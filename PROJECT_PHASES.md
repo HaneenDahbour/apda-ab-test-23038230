@@ -22,7 +22,7 @@ This file is a living project record. It should be updated at the end of each ph
 |---|---|---|---|
 | 1 | Build a reproducible project foundation | Git, GitHub, Python environment, Markdown | COMPLETE |
 | 2 | Validate and clean the raw experiment data | Python, pandas, pyarrow | COMPLETE |
-| 3 | Test the pipeline automatically | pytest, GitHub Actions | NOT STARTED |
+| 3 | Test the pipeline automatically | pytest, GitHub Actions | IN PROGRESS |
 | 4 | Perform analytical queries | DuckDB, SQL, Python | NOT STARTED |
 | 5 | Perform statistical inference and visualization | R, stats, ggplot2 | NOT STARTED |
 | 6 | Interpret results and finalize the project | Markdown, Git, GitHub | NOT STARTED |
@@ -403,7 +403,7 @@ At completion, another person should be able to:
 ```text
 Commit 1 - Workspace and reproducibility foundation        COMPLETE
 Commit 2 - Python validation and cleaning pipeline         COMPLETE
-Commit 3 - Pipeline tests and GitHub Actions               NOT STARTED
+Commit 3 - Pipeline tests and GitHub Actions               IN PROGRESS
 Commit 4 - DuckDB analytical queries                       NOT STARTED
 Commit 5 - R analysis, figures, and statistical test       NOT STARTED
 Commit 6 - Final report documentation and results          NOT STARTED
@@ -416,7 +416,7 @@ Commit 6 - Final report documentation and results          NOT STARTED
 ```text
 Phase 1  Reproducible Foundation          COMPLETE
 Phase 2  Python Data Pipeline             COMPLETE
-Phase 3  Tests + Continuous Integration   NOT STARTED
+Phase 3  Tests + Continuous Integration   IN PROGRESS
 Phase 4  DuckDB + SQL                     NOT STARTED
 Phase 5  R Statistical Analysis           NOT STARTED
 Phase 6  Final Interpretation             NOT STARTED
@@ -425,3 +425,62 @@ Phase 6  Final Interpretation             NOT STARTED
 Next step: **Phase 3, Block 3A - Pipeline unit tests.**
 
 
+
+
+---
+
+## Phase 3 Progress - Automated Testing and CI
+
+### Block 3A - Local Unit Tests
+
+Created:
+
+- `tests/test_pipeline.py`
+- `pytest.ini`
+
+The test suite uses small synthetic pandas DataFrames instead of the full Kaggle dataset.
+This keeps tests fast, isolated, understandable, and runnable on GitHub.
+
+The tests verify:
+
+- valid data passes
+- missing required columns fail
+- unexpected columns fail
+- missing required values fail
+- invalid group values fail
+- invalid landing-page values fail
+- invalid conversion values fail
+- malformed timestamps fail
+- assignment mismatches are removed
+- equivalent duplicates keep the earliest observation
+- conflicting duplicate conversions fail
+- a user cannot silently appear in both valid experiment arms
+- final cleaned data has one row per user
+
+Local result:
+
+``text
+13 passed
+``
+
+This provides regression protection: future changes to the cleaning pipeline can be checked automatically against these expected behaviors.
+
+### Block 3B - GitHub Actions Continuous Integration
+
+Created:
+
+- `.github/workflows/tests.yml`
+
+The workflow runs on pushes and pull requests.
+
+GitHub Actions will:
+
+1. create a fresh Ubuntu runner
+2. check out the repository
+3. install Python 3.14
+4. install `requirements.txt`
+5. run `python -m pytest -q`
+
+This checks that the project and its tests work outside the development laptop.
+
+Phase 3 will be marked COMPLETE only after the GitHub Actions run succeeds.
