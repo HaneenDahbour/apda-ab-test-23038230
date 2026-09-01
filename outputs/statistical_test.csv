@@ -1,0 +1,2 @@
+control_users,treatment_users,control_conversions,treatment_conversions,control_rate,treatment_rate,difference,difference_percentage_points,p_value,confidence_level,ci_lower,ci_upper,alpha,decision
+145274,145310,17489,17264,0.1203863045004612,0.11880806551510564,-0.0015782389853555567,-0.15782389853555567,0.1898833744819523,0.95,-0.003937860245052736,7.813822743416225e-4,0.05,Fail to reject H0

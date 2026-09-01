@@ -24,7 +24,7 @@ This file is a living project record. It should be updated at the end of each ph
 | 2 | Validate and clean the raw experiment data | Python, pandas, pyarrow | COMPLETE |
 | 3 | Test the pipeline automatically | pytest, GitHub Actions | COMPLETE |
 | 4 | Perform analytical queries | DuckDB, SQL, Python | COMPLETE |
-| 5 | Perform statistical inference and visualization | R, stats, ggplot2 | NOT STARTED |
+| 5 | Perform statistical inference and visualization | R, stats, ggplot2 | COMPLETE |
 | 6 | Interpret results and finalize the project | Markdown, Git, GitHub | NOT STARTED |
 
 ---
@@ -58,7 +58,7 @@ the analysis.
 
 ## Foundation commit
 
-````text
+```text
 7c9ddc7 chore: initialize reproducible A/B test workspace
 ```
 
@@ -88,13 +88,13 @@ File size: `15,901,933 bytes`
 
 SHA-256:
 
-````text
+```text
 d56e2accec25e99ac21cb3d76c5df516dd19cc7a77c14c9014f94e1ea1301beb
 ```
 
 Raw shape:
 
-````text
+```text
 Rows: 294,478
 Columns: 5
 ```
@@ -111,21 +111,21 @@ Findings:
 
 Valid experiment assignments:
 
-````text
+```text
 control   + old_page
 treatment + new_page
 ```
 
 Invalid experiment assignments:
 
-````text
+```text
 control   + new_page
 treatment + old_page
 ```
 
 Observed mismatches:
 
-````text
+```text
 control + new_page      1,928
 treatment + old_page    1,965
 Total mismatches        3,893
@@ -150,7 +150,7 @@ Cleaning order:
 
 After assignment cleaning:
 
-````text
+```text
 Raw rows:                   294,478
 Assignment mismatches:        3,893
 Rows after removal:         290,585
@@ -175,7 +175,7 @@ Main responsibilities:
 
 Real-data smoke-test result:
 
-````text
+```text
 raw_rows: 294,478
 assignment_mismatches_removed: 3,893
 duplicate_users_after_assignment_cleaning: 1
@@ -188,14 +188,14 @@ treatment_rows: 145,310
 
 Final invariants:
 
-````text
+```text
 Duplicate users remaining:       0
 Assignment mismatches remaining: 0
 ```
 
 Clean descriptive conversion rates:
 
-````text
+```text
 control
 count       145,274
 converted    17,489
@@ -310,7 +310,7 @@ Planned checks include valid input, schema failures, invalid values, malformed t
 
 ## Status
 
-**NOT STARTED**
+**COMPLETE**
 
 ---
 
@@ -626,6 +626,14 @@ These are small analytical result artifacts and are suitable to keep in Git for 
 
 Phase 4 reproducibility gate passed.
 
+Final GitHub Actions verification:
+
+```text
+Run ID: 33521469773
+Result: SUCCESS
+All workflow steps passed on the fresh Ubuntu runner.
+```
+
 - DuckDB analysis completed successfully.
 - Group and daily summaries reconciled to all 290,584 cleaned users.
 - The experiment covered 23 dates and produced 46 date-by-group rows.
@@ -641,25 +649,371 @@ Phase 4 reproducibility gate passed.
 
 ## Purpose
 
-Determine whether the observed difference between control and treatment conversion rates is statistically supported.
+Determine whether the small conversion-rate difference observed in Phase 4 is statistically supported or could reasonably result from random experiment variation.
 
-Planned tools: R, readr, dplyr, ggplot2, base R stats.
+Phase 4 answered:
 
-Hypotheses:
+> What difference did we observe in this sample?
 
-````text
-H0: control and treatment population conversion rates are equal
-H1: control and treatment population conversion rates are different
+Phase 5 asks:
+
+> Is that observed difference strong enough relative to normal sampling variation to provide evidence of a real population difference?
+
+Observed Phase 4 result:
+
+```text
+Control conversion rate:   12.0386%
+Treatment conversion rate: 11.8808%
+
+Treatment - Control:
+approximately -0.1578 percentage points
+```
+
+This descriptive difference alone is not sufficient for a statistical conclusion.
+
+## Core Phase 5 Flow
+
+```mermaid
+flowchart TD
+    A["Phase 4 descriptive result<br/>Control vs Treatment"]
+    B["Define H0 and H1"]
+    C["Two-proportion statistical test"]
+    D["p-value"]
+    E["95% confidence interval"]
+    F["Compare p-value with alpha = 0.05"]
+    G["Reject H0"]
+    H["Fail to reject H0"]
+    I["Interpret effect size"]
+    J["Create statistical visualizations"]
+    K["Phase 6 final recommendation"]
+
+    A --> B
+    B --> C
+    C --> D
+    C --> E
+    D --> F
+    E --> I
+    F -->|p < 0.05| G
+    F -->|p >= 0.05| H
+    G --> I
+    H --> I
+    I --> J
+    J --> K
+```
+
+A simpler verbal flow is:
+
+```text
+Observed difference
+       |
+       v
+H0 and H1
+       |
+       v
+Two-proportion test
+       |
+       +-------------------+
+       |                   |
+       v                   v
+    p-value        confidence interval
+       |                   |
+       +---------+---------+
+                 |
+                 v
+        compare p-value to 0.05
+                 |
+         +-------+-------+
+         |               |
+         v               v
+     reject H0      fail to reject H0
+                 |
+                 v
+        interpret effect size
+                 |
+                 v
+             Phase 6
+```
+
+## Null Hypothesis - H0
+
+```text
+H0: p_treatment = p_control
+```
+
+The null hypothesis represents the baseline assumption that there is no real population-level difference in conversion rate between the new and old landing pages.
+
+The analysis tests whether the observed data provide enough evidence against this baseline.
+
+## Alternative Hypothesis - H1
+
+```text
+H1: p_treatment != p_control
+```
+
+The alternative hypothesis states that the population conversion rates differ.
+
+Because the alternative allows either a positive or negative difference, this project uses a two-sided test.
+
+The question is therefore whether the new page is different, not only whether it is better.
+
+## Significance Level
+
+The project uses:
+
+```text
 alpha = 0.05
 ```
 
-Planned work includes a hypothesis test, confidence interval, effect-size interpretation, visualizations, and a statistical decision.
+The decision rule is:
+
+```text
+p-value < 0.05
+-> reject H0
+
+p-value >= 0.05
+-> fail to reject H0
+```
+
+Failing to reject H0 does not prove that H0 is true. It means the experiment does not provide sufficient statistical evidence against H0 at the chosen significance level.
+
+## What the p-value Means
+
+The p-value is interpreted under the assumption that H0 is true.
+
+It asks:
+
+> If the pages really had equal population conversion rates, how unusual would it be to observe a sample difference at least as extreme as the one measured in this experiment?
+
+Conceptually:
+
+```text
+Assume no real difference
+        |
+        v
+Repeat the experiment conceptually
+        |
+        v
+Random samples produce different rates
+        |
+        v
+How often is the difference this extreme?
+        |
+        v
+p-value
+```
+
+A small p-value means the observed result would be unusual if H0 were true.
+
+A larger p-value means the observed result is reasonably compatible with random variation under H0.
+
+## Confidence Interval
+
+The confidence interval complements the p-value by estimating a range of plausible treatment-minus-control effects.
+
+The effect is defined as:
+
+```text
+treatment conversion rate - control conversion rate
+```
+
+Interpretation:
+
+```text
+negative effect -> treatment lower
+zero            -> no difference
+positive effect -> treatment higher
+```
+
+If a 95% confidence interval contains zero, then a zero population difference remains compatible with the data at the corresponding two-sided 5% significance level.
+
+## Why a Two-Proportion Test
+
+The experiment outcome is binary:
+
+```text
+converted = 1
+not converted = 0
+```
+
+There are two independent experiment arms:
+
+```text
+control
+treatment
+```
+
+The quantities being compared are therefore two conversion proportions:
+
+```text
+17,489 / 145,274
+versus
+17,264 / 145,310
+```
+
+A two-sample proportion test is appropriate for comparing these two rates.
+
+The planned R implementation uses:
+
+```r
+prop.test(..., correct = FALSE)
+```
+
+## Statistical Significance vs Practical Significance
+
+These are different questions.
+
+```text
+Statistical significance
+-> Is the difference unlikely to be explained by random sampling variation?
+
+Practical significance
+-> Is the difference large enough to matter in a real decision?
+```
+
+A very large sample can make a very small effect statistically significant.
+
+Therefore Phase 5 evaluates statistical evidence, while Phase 6 combines statistical significance, effect size, and practical meaning into the final recommendation.
+
+## Actual Phase 5 Statistical Result
+
+The R analysis produced the following observed values:
+
+| Metric | Result |
+|---|---:|
+| Control conversion rate | 12.0386% |
+| Treatment conversion rate | 11.8808% |
+| Treatment - Control | -0.1578 percentage points |
+| Two-sided p-value | 0.189883 |
+| 95% CI lower bound | -0.3938 percentage points |
+| 95% CI upper bound | +0.0781 percentage points |
+| Alpha | 0.05 |
+| Decision | Fail to reject H0 |
+
+The p-value is larger than the significance threshold:
+
+```text
+0.189883 > 0.05
+```
+
+Therefore the null hypothesis is not rejected.
+
+The correct interpretation is:
+
+> The experiment does not provide sufficient statistical evidence at the 5% significance level that the population conversion rates of the control and treatment landing pages differ.
+
+This does not prove that the two pages are exactly equal.
+
+The 95% confidence interval for Treatment - Control is approximately:
+
+```text
+-0.3938 percentage points
+to
++0.0781 percentage points
+```
+
+Because the interval contains zero, a zero population difference remains compatible with the observed data.
+
+The observed sample difference is negative, meaning the treatment conversion rate was slightly lower, but the statistical evidence is not strong enough to conclude that this reflects a real population effect.
+
+## Direction Consistency
+
+The effect direction is defined consistently throughout the project as:
+
+```text
+Treatment - Control
+```
+
+Therefore:
+
+```text
+negative -> treatment lower
+zero     -> no difference
+positive -> treatment higher
+```
+
+The same ordering is used in Phase 4 descriptive calculations, the R effect calculation, the `prop.test()` input order, the confidence interval, and the final interpretation.
+
+This prevents accidentally reversing the sign of the experiment effect.
+
+## Independent Cross-Check
+
+The R result was independently verified using the equivalent two-proportion z-test equations in Python.
+
+The independent calculation reproduced the same:
+
+- treatment-minus-control difference;
+- z statistic;
+- two-sided p-value;
+- 95% confidence interval.
+
+This provides an additional verification that the statistical result is not dependent on one implementation alone.
+
+## Generated Phase 5 Outputs
+
+- `outputs/statistical_test.csv`
+- `outputs/figures/conversion_rates.png`
+- `outputs/figures/daily_conversion.png`
+
+The first figure compares the overall conversion rates of the two experiment groups.
+
+The second figure shows how conversion rates changed by day for control and treatment.
+
+
+## Planned Phase 5 Outputs
+
+Phase 5 will produce:
+
+- the observed treatment-minus-control difference;
+- a two-proportion hypothesis test;
+- a p-value;
+- a 95% confidence interval;
+- a reject-or-fail-to-reject decision for H0;
+- effect-size interpretation;
+- reproducible statistical figures;
+- R-generated result artifacts for Phase 6.
+
+## Current Environment Gate
+
+The initial Phase 5 check found that `Rscript` was unavailable from PowerShell.
+
+Investigation showed that R 4.6.1 was already installed at:
+
+```text
+C:\Program Files\R\R-4.6.1\bin\x64\Rscript.exe
+```
+
+The issue was that the R executable directory was not available on the current PowerShell PATH.
+
+After adding the R bin directory to the session PATH, `Rscript --version` succeeded and the required `readr`, `dplyr`, and `ggplot2` packages were installed and verified.
+
+## How to Explain Phase 5 to the Teacher
+
+> Phase 4 showed the observed conversion rates, but an observed difference can occur simply because of random sampling variation. Phase 5 therefore performs statistical inference. The null hypothesis assumes the two population conversion rates are equal, while the two-sided alternative says they differ. A two-proportion test calculates a p-value and confidence interval. The p-value is compared with alpha = 0.05 to decide whether there is sufficient evidence to reject the null hypothesis. The confidence interval shows the plausible size and direction of the effect. Statistical significance is kept separate from practical significance, which is considered in the final recommendation.
+
+## Phase 5 Completion Gate
+
+Phase 5 reproducibility gate passed.
+
+Evidence:
+
+- R 4.6.1 command-line execution was verified.
+- `readr`, `dplyr`, and `ggplot2` were installed and verified.
+- Exact R/package versions were recorded in `r/package-versions.txt`.
+- The R two-proportion analysis completed successfully.
+- The observed Treatment - Control difference was -0.157824 percentage points.
+- The two-sided p-value was 0.1898833745.
+- The 95% confidence interval was approximately [-0.393786, +0.078138] percentage points.
+- The statistical decision was Fail to reject H0.
+- An independent Python implementation reproduced the same p-value and confidence interval.
+- `statistical_test.csv` reproduced with an identical SHA-256 hash.
+- Both PNG figures reproduced with identical SHA-256 hashes.
+- The existing Python regression suite remained healthy with 13 tests passing.
+
+Therefore Phase 5 is considered reproducible and complete.
 
 ## Status
 
-**NOT STARTED**
-
----
+**COMPLETE**
 
 # Phase 6 - Final Interpretation and Documentation
 
@@ -695,12 +1049,12 @@ At completion, another person should be able to:
 
 # Commit Roadmap
 
-````text
+```text
 Commit 1 - Workspace and reproducibility foundation        COMPLETE
 Commit 2 - Python validation and cleaning pipeline         COMPLETE
 Commit 3 - Pipeline tests and GitHub Actions               COMPLETE
 Commit 4 - DuckDB analytical queries                       COMPLETE
-Commit 5 - R analysis, figures, and statistical test       NOT STARTED
+Commit 5 - R analysis, figures, and statistical test       COMPLETE
 Commit 6 - Final report documentation and results          NOT STARTED
 ```
 
@@ -708,16 +1062,16 @@ Commit 6 - Final report documentation and results          NOT STARTED
 
 # Current Position
 
-````text
+```text
 Phase 1  Reproducible Foundation          COMPLETE
 Phase 2  Python Data Pipeline             COMPLETE
 Phase 3  Tests + Continuous Integration   COMPLETE
 Phase 4  DuckDB + SQL                     COMPLETE
-Phase 5  R Statistical Analysis           NOT STARTED
+Phase 5  R Statistical Analysis           COMPLETE
 Phase 6  Final Interpretation             NOT STARTED
 ```
 
-Next step: **Phase 5 - R statistical inference and visualization.**
+Next step: **Phase 6 - final interpretation, practical significance, and project conclusion.**
 
 
 

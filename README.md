@@ -61,7 +61,8 @@ apda-ab-test-23038230/
 |   |-- group_summary.sql
 |   `-- daily_conversion.sql
 |-- r/
-|   `-- ab_test.R
+|   |-- ab_test.R
+|   `-- package-versions.txt
 |-- tests/
 |   `-- test_pipeline.py
 |-- outputs/
@@ -134,6 +135,8 @@ python scripts/run_sql.py
 
 ### Run the R analysis
 
+`Rscript` must be available on PATH before running the command.
+
 ```powershell
 Rscript r/ab_test.R
 ```
@@ -154,10 +157,18 @@ outputs/group_summary.csv
 outputs/daily_conversion.csv
 ```
 
-The R analysis creates two figures inside:
+The R statistical analysis creates:
 
 ```text
-outputs/figures/
+outputs/statistical_test.csv
+outputs/figures/conversion_rates.png
+outputs/figures/daily_conversion.png
+```
+
+The exact R and package versions used for Phase 5 are recorded in:
+
+```text
+r/package-versions.txt
 ```
 
 The processed datasets are excluded from Git because they can be recreated from
@@ -183,6 +194,37 @@ in Phase 5.
 Phase 4 reproducibility verification passed: rerunning the DuckDB analytical
 pipeline from the same cleaned Parquet input reproduced both analytical CSV
 outputs identically.
+
+## Statistical inference
+
+Phase 5 tests whether the descriptive control-versus-treatment conversion-rate
+difference observed in Phase 4 is statistically supported.
+
+The analysis uses a two-sided two-proportion test with:
+
+```text
+H0: treatment and control population conversion rates are equal
+H1: treatment and control population conversion rates are different
+alpha = 0.05
+```
+
+The R analysis produced a treatment-minus-control difference of approximately
+-0.1578 percentage points, with a two-sided p-value of 0.189883 and a 95%
+confidence interval from approximately -0.3938 to +0.0781 percentage points.
+
+Because the p-value is greater than alpha = 0.05 and the confidence interval
+contains zero, the analysis fails to reject H0. The experiment therefore does
+not provide sufficient statistical evidence that the population conversion
+rates of the old and new landing pages differ.
+
+Statistical significance is interpreted separately from practical significance.
+
+R 4.6.1 and the required `readr`, `dplyr`, and `ggplot2` packages were verified for the Phase 5 analysis.
+
+Phase 5 reproducibility verification passed. The R statistical result was
+independently reproduced with the equivalent two-proportion z-test equations
+in Python, and rerunning the R analysis reproduced the result CSV and both
+figures with identical SHA-256 hashes.
 
 ## Testing and continuous integration
 
