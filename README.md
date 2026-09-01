@@ -1,4 +1,4 @@
-﻿# Landing Page A/B Test
+# Landing Page A/B Test
 
 A reproducible analytics project for the Advanced Programming for Data Analysis course.
 
@@ -179,7 +179,10 @@ python -m pytest -q
 
 GitHub Actions is configured in `.github/workflows/tests.yml` to recreate the
 Python environment and run the same test suite automatically on pushes and pull
-requests.
+requests. The Phase 3 CI verification completed successfully on a fresh Ubuntu runner.
+The workflow uses `runs-on: ubuntu-latest`, so GitHub automatically creates a
+temporary Linux machine, checks out the repository, installs Python and the
+documented dependencies, and runs the same pytest suite used locally.
 ## Reproducibility
 
 All code uses paths relative to the repository root. No personal absolute paths
@@ -191,4 +194,3 @@ can be recreated using the commands documented above.
 A detailed phase-by-phase explanation of the project, technical decisions,
 validation results, and implementation progress is available in
 [PROJECT_PHASES.md](PROJECT_PHASES.md).
-

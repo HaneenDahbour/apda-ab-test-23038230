@@ -1,4 +1,4 @@
-﻿# Project Phases and Implementation Guide
+# Project Phases and Implementation Guide
 
 ## Project Goal
 
@@ -22,7 +22,7 @@ This file is a living project record. It should be updated at the end of each ph
 |---|---|---|---|
 | 1 | Build a reproducible project foundation | Git, GitHub, Python environment, Markdown | COMPLETE |
 | 2 | Validate and clean the raw experiment data | Python, pandas, pyarrow | COMPLETE |
-| 3 | Test the pipeline automatically | pytest, GitHub Actions | IN PROGRESS |
+| 3 | Test the pipeline automatically | pytest, GitHub Actions | COMPLETE |
 | 4 | Perform analytical queries | DuckDB, SQL, Python | NOT STARTED |
 | 5 | Perform statistical inference and visualization | R, stats, ggplot2 | NOT STARTED |
 | 6 | Interpret results and finalize the project | Markdown, Git, GitHub | NOT STARTED |
@@ -403,7 +403,7 @@ At completion, another person should be able to:
 ```text
 Commit 1 - Workspace and reproducibility foundation        COMPLETE
 Commit 2 - Python validation and cleaning pipeline         COMPLETE
-Commit 3 - Pipeline tests and GitHub Actions               IN PROGRESS
+Commit 3 - Pipeline tests and GitHub Actions               COMPLETE
 Commit 4 - DuckDB analytical queries                       NOT STARTED
 Commit 5 - R analysis, figures, and statistical test       NOT STARTED
 Commit 6 - Final report documentation and results          NOT STARTED
@@ -416,13 +416,13 @@ Commit 6 - Final report documentation and results          NOT STARTED
 ```text
 Phase 1  Reproducible Foundation          COMPLETE
 Phase 2  Python Data Pipeline             COMPLETE
-Phase 3  Tests + Continuous Integration   IN PROGRESS
+Phase 3  Tests + Continuous Integration   COMPLETE
 Phase 4  DuckDB + SQL                     NOT STARTED
 Phase 5  R Statistical Analysis           NOT STARTED
 Phase 6  Final Interpretation             NOT STARTED
 ```
 
-Next step: **Phase 3, Block 3A - Pipeline unit tests.**
+Next step: **Phase 4, Block 4A - DuckDB analytical design and SQL queries.**
 
 
 
@@ -457,11 +457,7 @@ The tests verify:
 - a user cannot silently appear in both valid experiment arms
 - final cleaned data has one row per user
 
-Local result:
-
-``text
-13 passed
-``
+Local result: **13 passed.**
 
 This provides regression protection: future changes to the cleaning pipeline can be checked automatically against these expected behaviors.
 
@@ -483,4 +479,44 @@ GitHub Actions will:
 
 This checks that the project and its tests work outside the development laptop.
 
-Phase 3 will be marked COMPLETE only after the GitHub Actions run succeeds.
+GitHub Actions run 33494180229 completed successfully on a fresh Ubuntu runner. All CI steps passed.
+
+### How GitHub Actions Ran the Tests on Cloud Ubuntu
+
+GitHub Actions is the Continuous Integration (CI) system used by this project.
+
+The workflow contains:
+
+``yaml
+runs-on: ubuntu-latest
+``
+
+This instruction tells GitHub to automatically create a temporary Ubuntu Linux machine in the cloud.
+
+The CI process is:
+
+1. a commit is pushed to GitHub;
+2. GitHub detects the workflow in `.github/workflows/tests.yml`;
+3. GitHub creates a fresh Ubuntu runner;
+4. `actions/checkout` downloads the repository onto that runner;
+5. `actions/setup-python` prepares Python 3.14;
+6. dependencies are installed from `requirements.txt`;
+7. GitHub runs `python -m pytest -q`;
+8. the 13 pipeline tests are executed;
+9. GitHub reports success or failure;
+10. the temporary Ubuntu machine is discarded after the job.
+
+This is different from manually opening Ubuntu. GitHub automatically creates and manages the Linux environment.
+
+Why this matters:
+
+The tests already passed on the local Windows development machine. They also passed on a newly created Linux environment that did not contain the developer's personal configuration.
+
+Therefore Phase 3 provides stronger evidence of portability and reproducibility:
+
+``text
+Windows development machine -> tests pass
+Fresh Ubuntu CI machine     -> tests pass
+``
+
+The fresh runner also reduces the risk of hidden dependencies, such as software or configuration that exists only on the developer's computer.
